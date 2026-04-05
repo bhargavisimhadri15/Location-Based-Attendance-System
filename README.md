@@ -61,6 +61,11 @@ Frontend env (`frontend/.env`):
 - `POST /api/auth/register` is **bootstrap-only**: the **first registered user becomes Admin**. After that, self-registration is disabled.
 - Admin creates employees from **Admin Console → Employee Roster**, and assigns one or more locations to each employee.
 
+## Demo credentials (optional)
+Run `node seed.js` from `backend/` to create a demo admin, demo employee, and a demo location.
+- Admin: `admin@geoattend.com` / `admin123`
+- Employee: `employee@geoattend.com` / `employee123`
+
 ## Notes
 - Desktop testing: use Chrome DevTools → **Sensors** to simulate location coordinates.
 
