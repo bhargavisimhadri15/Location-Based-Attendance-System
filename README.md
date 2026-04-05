@@ -37,6 +37,7 @@ Backend env (`backend/.env`):
 - `PORT` (default in example: `5001`)
 - `MONGO_URI` (local example: `mongodb://127.0.0.1:27017/attendance-system`)
 - `JWT_SECRET`
+- `MAX_GPS_ACCURACY_METERS` (default: `50`)
 
 ### 2) Frontend
 ```bash
@@ -48,6 +49,7 @@ npm run dev
 
 Frontend env (`frontend/.env`):
 - `VITE_API_BASE_URL` (example: `http://localhost:5001`)
+- `VITE_MAX_GPS_ACCURACY_METERS` (default: `50`)
 
 ## API (high level)
 - Auth: `POST /api/auth/register`, `POST /api/auth/login`

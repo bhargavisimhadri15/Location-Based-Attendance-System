@@ -4,6 +4,8 @@ import { AuthContext } from '../context/AuthContext';
 import { MapPin, Navigation, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const MAX_GPS_ACCURACY_METERS = Number(import.meta.env.VITE_MAX_GPS_ACCURACY_METERS ?? 50);
+
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
     const [locations, setLocations] = useState([]);
@@ -40,22 +42,57 @@ const Dashboard = () => {
         }
     };
 
-    const getMyLocation = () => {
+    const getMyLocation = ({ maxWaitMs = 12000 } = {}) => {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
-                reject('Geolocation not supported');
+                reject(new Error('Geolocation not supported'));
+                return;
             }
-            navigator.geolocation.getCurrentPosition(
+
+            let bestPosition = null;
+            const startedAt = Date.now();
+
+            const stop = (watchId) => {
+                if (typeof watchId === 'number') navigator.geolocation.clearWatch(watchId);
+            };
+
+            const timeout = setTimeout(() => {
+                if (bestPosition) {
+                    resolve(bestPosition.coords);
+                    return;
+                }
+                reject(new Error('Location timeout'));
+            }, maxWaitMs);
+
+            const watchId = navigator.geolocation.watchPosition(
                 (pos) => {
-                    setCoords([pos.coords.longitude, pos.coords.latitude]);
-                    setAccuracy(pos.coords.accuracy);
-                    resolve(pos.coords);
+                    if (!bestPosition || pos.coords.accuracy < bestPosition.coords.accuracy) {
+                        bestPosition = pos;
+                        setCoords([pos.coords.longitude, pos.coords.latitude]);
+                        setAccuracy(pos.coords.accuracy);
+                    }
+
+                    const meetsThreshold = Number.isFinite(pos.coords.accuracy) && pos.coords.accuracy <= MAX_GPS_ACCURACY_METERS;
+                    const waitedLongEnough = Date.now() - startedAt > 2000;
+                    if (meetsThreshold && waitedLongEnough) {
+                        clearTimeout(timeout);
+                        stop(watchId);
+                        resolve(pos.coords);
+                    }
                 },
                 (err) => {
-                    setError('Location access denied or unavailable');
-                    reject(err);
+                    clearTimeout(timeout);
+                    stop(watchId);
+
+                    if (err && typeof err.code === 'number') {
+                        if (err.code === 1) return reject(new Error('Location permission denied'));
+                        if (err.code === 2) return reject(new Error('Location unavailable'));
+                        if (err.code === 3) return reject(new Error('Location timeout'));
+                    }
+
+                    reject(new Error('Location access denied or unavailable'));
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, maximumAge: 0, timeout: maxWaitMs }
             );
         });
     };
@@ -66,6 +103,10 @@ const Dashboard = () => {
         setRangeLoading(true);
         try {
             const pos = await getMyLocation();
+            if (Number.isFinite(pos.accuracy) && pos.accuracy > MAX_GPS_ACCURACY_METERS) {
+                setError(`Location accuracy too low (${pos.accuracy.toFixed(1)}m). Move outdoors or enable high-accuracy GPS (need ≤ ${MAX_GPS_ACCURACY_METERS}m).`);
+                return;
+            }
             const res = await api.post('/api/attendance/checkin', {
                 locationId: selectedLocation._id,
                 userCoordinates: [pos.longitude, pos.latitude],
@@ -73,7 +114,14 @@ const Dashboard = () => {
             });
             setStatus({ isCheckIn: true, data: res.data });
         } catch (err) {
-            setError(err.response?.data?.msg || 'Check-in failed');
+            const apiMsg = err.response?.data?.msg;
+            const apiAccuracy = err.response?.data?.accuracy;
+            const apiMax = err.response?.data?.maxAllowed;
+            if (apiMsg === 'Location accuracy too low' && Number.isFinite(apiAccuracy) && Number.isFinite(apiMax)) {
+                setError(`Location accuracy too low (${Number(apiAccuracy).toFixed(1)}m). Need ≤ ${Number(apiMax)}m.`);
+            } else {
+                setError(apiMsg || err.message || 'Check-in failed');
+            }
         } finally {
             setRangeLoading(false);
         }
@@ -84,6 +132,10 @@ const Dashboard = () => {
         setRangeLoading(true);
         try {
             const pos = await getMyLocation();
+            if (Number.isFinite(pos.accuracy) && pos.accuracy > MAX_GPS_ACCURACY_METERS) {
+                setError(`Location accuracy too low (${pos.accuracy.toFixed(1)}m). Move outdoors or enable high-accuracy GPS (need ≤ ${MAX_GPS_ACCURACY_METERS}m).`);
+                return;
+            }
             const res = await api.post('/api/attendance/checkout', {
                 userCoordinates: [pos.longitude, pos.latitude],
                 accuracy: pos.accuracy
@@ -91,7 +143,14 @@ const Dashboard = () => {
             setStatus({ isCheckIn: false, data: null });
             fetchInitialData(); // Refresh history or status
         } catch (err) {
-            setError(err.response?.data?.msg || 'Check-out failed');
+            const apiMsg = err.response?.data?.msg;
+            const apiAccuracy = err.response?.data?.accuracy;
+            const apiMax = err.response?.data?.maxAllowed;
+            if (apiMsg === 'Location accuracy too low' && Number.isFinite(apiAccuracy) && Number.isFinite(apiMax)) {
+                setError(`Location accuracy too low (${Number(apiAccuracy).toFixed(1)}m). Need ≤ ${Number(apiMax)}m.`);
+            } else {
+                setError(apiMsg || err.message || 'Check-out failed');
+            }
         } finally {
             setRangeLoading(false);
         }
@@ -225,7 +284,7 @@ const Dashboard = () => {
                             </li>
                             <li className="flex items-start gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                                <span>GPS accuracy of less than 50m is required for valid check-ins.</span>
+                                <span>GPS accuracy of ≤ {Number.isFinite(MAX_GPS_ACCURACY_METERS) ? MAX_GPS_ACCURACY_METERS : 50}m is required for valid actions.</span>
                             </li>
                             <li className="flex items-start gap-3">
                                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />

@@ -12,6 +12,8 @@ A robust MERN stack application designed to enforce geographic boundaries for em
 - **Accuracy Thresholds**: The system rejects any location data with an accuracy reading higher than **50 meters** to prevent spoofing or poor GPS signal issues.
 - **Persistence**: Admin-predefined locations are stored with MongoDB `2dsphere` indices to allow for future scalability and advanced geospatial queries.
 
+> Note: The max accuracy threshold is configurable via `MAX_GPS_ACCURACY_METERS` (backend) and `VITE_MAX_GPS_ACCURACY_METERS` (frontend), default `50`.
+
 ### **Authentication & Authorization**
 - **JWT-Based**: Secure stateless authentication using JSON Web Tokens.
 - **RBAC (Role-Based Access Control)**: Strictly differentiates between 'Admin' and 'Employee' roles. Admins manage the infrastructure, while Employees perform field actions.

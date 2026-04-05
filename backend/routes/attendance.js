@@ -5,6 +5,29 @@ const { authMiddleware } = require('../middleware/auth');
 const { Attendance, Location, User } = require('../models');
 const { isWithinRange } = require('../utils/geoUtils');
 
+const DEFAULT_MAX_GPS_ACCURACY_METERS = 50;
+const parsedMaxAccuracy = Number(process.env.MAX_GPS_ACCURACY_METERS ?? DEFAULT_MAX_GPS_ACCURACY_METERS);
+const MAX_GPS_ACCURACY_METERS = Number.isFinite(parsedMaxAccuracy) && parsedMaxAccuracy > 0
+    ? parsedMaxAccuracy
+    : DEFAULT_MAX_GPS_ACCURACY_METERS;
+
+const validateCoordinates = (coords) => {
+    if (!Array.isArray(coords) || coords.length !== 2) return false;
+    return Number.isFinite(coords[0]) && Number.isFinite(coords[1]);
+};
+
+const validateAccuracy = (accuracy) => {
+    if (!Number.isFinite(accuracy)) {
+        return { ok: false, msg: 'Location accuracy unavailable', accuracy, maxAllowed: MAX_GPS_ACCURACY_METERS };
+    }
+
+    if (accuracy > MAX_GPS_ACCURACY_METERS) {
+        return { ok: false, msg: 'Location accuracy too low', accuracy, maxAllowed: MAX_GPS_ACCURACY_METERS };
+    }
+
+    return { ok: true };
+};
+
 // @route   POST api/attendance/checkin
 // @desc    Check-in to a location
 router.post('/checkin', authMiddleware, async (req, res) => {
@@ -14,13 +37,14 @@ router.post('/checkin', authMiddleware, async (req, res) => {
         return res.status(400).json({ msg: 'Invalid location id' });
     }
 
-    if (!Array.isArray(userCoordinates) || userCoordinates.length !== 2) {
+    if (!validateCoordinates(userCoordinates)) {
         return res.status(400).json({ msg: 'userCoordinates must be [longitude, latitude]' });
     }
 
-    // 1. Accuracy Handling (Threshold 50 meters, for instance)
-    if (!Number.isFinite(accuracy) || accuracy > 50) {
-        return res.status(400).json({ msg: 'Location accuracy too low' });
+    // 1. Accuracy Handling
+    const accuracyCheck = validateAccuracy(accuracy);
+    if (!accuracyCheck.ok) {
+        return res.status(400).json(accuracyCheck);
     }
 
     try {
@@ -82,12 +106,13 @@ router.post('/checkin', authMiddleware, async (req, res) => {
 router.post('/checkout', authMiddleware, async (req, res) => {
     const { userCoordinates, accuracy } = req.body;
 
-    if (!Array.isArray(userCoordinates) || userCoordinates.length !== 2) {
+    if (!validateCoordinates(userCoordinates)) {
         return res.status(400).json({ msg: 'userCoordinates must be [longitude, latitude]' });
     }
 
-    if (!Number.isFinite(accuracy) || accuracy > 50) {
-        return res.status(400).json({ msg: 'Location accuracy too low' });
+    const accuracyCheck = validateAccuracy(accuracy);
+    if (!accuracyCheck.ok) {
+        return res.status(400).json(accuracyCheck);
     }
 
     try {
