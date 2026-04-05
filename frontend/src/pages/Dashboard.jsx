@@ -23,7 +23,7 @@ const Dashboard = () => {
         try {
             setLoading(true);
             const [locRes, statRes] = await Promise.all([
-                api.get('/api/admin/locations'),
+                api.get('/api/locations'),
                 api.get('/api/attendance/status')
             ]);
             setLocations(locRes.data);
@@ -142,6 +142,11 @@ const Dashboard = () => {
                         <div className="space-y-6">
                             <div className="space-y-3">
                                 <label className="label">Select Assigned Location</label>
+                                {locations.length === 0 && (
+                                    <div className="text-sm text-white/50 bg-white/5 border border-white/10 rounded-2xl p-4">
+                                        No locations are assigned to your profile yet. Contact your administrator.
+                                    </div>
+                                )}
                                 <div className="grid gap-3">
                                     {locations.map(loc => (
                                         <button 
@@ -168,7 +173,7 @@ const Dashboard = () => {
 
                             <button 
                                 onClick={handleCheckIn}
-                                disabled={rangeLoading || !selectedLocation}
+                                disabled={rangeLoading || !selectedLocation || locations.length === 0}
                                 className="btn-primary w-full py-5 h-20 rounded-3xl flex items-center justify-center gap-3 group relative overflow-hidden disabled:opacity-50"
                             >
                                 {rangeLoading ? (

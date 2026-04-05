@@ -15,6 +15,7 @@ A robust MERN stack application designed to enforce geographic boundaries for em
 ### **Authentication & Authorization**
 - **JWT-Based**: Secure stateless authentication using JSON Web Tokens.
 - **RBAC (Role-Based Access Control)**: Strictly differentiates between 'Admin' and 'Employee' roles. Admins manage the infrastructure, while Employees perform field actions.
+- **Provisioning Model**: The first registered account bootstraps the system as **Admin**. After bootstrap, the Admin creates employee accounts and assigns permissible work sites (locations).
 
 ### **Concurrency & Consistency**
 - **Atomic Sessions**: Employees cannot check in twice without checking out first.
@@ -27,8 +28,9 @@ A robust MERN stack application designed to enforce geographic boundaries for em
 ### **Auth Endpoints**
 | Method | Endpoint | Description | Access |
 | :--- | :--- | :--- | :--- |
-| POST | `/api/auth/register` | Register an Admin or Employee | Public |
+| POST | `/api/auth/register` | Bootstrap admin (first user only) | Public |
 | POST | `/api/auth/login` | Authenticate and receive JWT | Public |
+| GET | `/api/auth/me` | Get current user profile | Auth |
 
 ### **Attendance Endpoints**
 | Method | Endpoint | Description | Access |
@@ -42,8 +44,18 @@ A robust MERN stack application designed to enforce geographic boundaries for em
 | :--- | :--- | :--- | :--- |
 | POST | `/api/admin/locations` | Define a new geofence site | Admin |
 | GET | `/api/admin/locations` | List all available sites | Auth |
+| PUT | `/api/admin/locations/:id` | Update a geofence site | Admin |
+| DELETE | `/api/admin/locations/:id` | Delete a geofence site | Admin |
 | GET | `/api/admin/attendance` | View all system-wide logs | Admin |
 | GET | `/api/admin/users` | List all registered employees | Admin |
+| POST | `/api/admin/users` | Create an employee | Admin |
+| PUT | `/api/admin/users/:id` | Update employee profile/assignments | Admin |
+| DELETE | `/api/admin/users/:id` | Delete an employee (blocked if attendance exists) | Admin |
+
+### **Locations (Role-aware)**
+| Method | Endpoint | Description | Access |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/locations` | Admin: all locations; Employee: assigned locations only | Auth |
 
 ---
 

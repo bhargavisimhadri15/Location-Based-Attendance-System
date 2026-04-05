@@ -2,14 +2,20 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { authMiddleware } = require('../middleware/auth');
 const { User } = require('../models');
 
 // @route   POST api/auth/register
-// @desc    Register a new user (admin/employee)
+// @desc    Bootstrap registration (first user becomes admin)
 router.post('/register', async (req, res) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     try {
+        const hasAnyUsers = await User.exists({});
+        if (hasAnyUsers) {
+            return res.status(403).json({ msg: 'Registration is disabled. Contact an administrator.' });
+        }
+
         let user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({ msg: 'User already exists' });
@@ -19,7 +25,7 @@ router.post('/register', async (req, res) => {
             name,
             email,
             password,
-            role
+            role: 'admin'
         });
 
         const salt = await bcrypt.genSalt(10);
@@ -47,6 +53,21 @@ router.post('/register', async (req, res) => {
         );
     } catch (err) {
         console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET api/auth/me
+// @desc    Get current user profile
+router.get('/me', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id)
+            .select('-password')
+            .populate('assignedLocations', 'name address radius coordinates');
+
+        if (!user) return res.status(404).json({ msg: 'User not found' });
+        res.json(user);
+    } catch (err) {
         res.status(500).send('Server Error');
     }
 });

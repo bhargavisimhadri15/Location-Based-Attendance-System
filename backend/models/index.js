@@ -6,7 +6,8 @@ const userSchema = new Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'employee'], default: 'employee' }
+    role: { type: String, enum: ['admin', 'employee'], default: 'employee' },
+    assignedLocations: [{ type: Schema.Types.ObjectId, ref: 'Location' }]
 }, { timestamps: true });
 
 // Location (Geofence)

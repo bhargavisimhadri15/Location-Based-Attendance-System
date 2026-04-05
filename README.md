@@ -21,9 +21,14 @@ Geofenced attendance tracking built with the MERN stack. Employees can **check i
 
 ## Quick start (local)
 
+### 0) Prerequisites
+- Node.js (v16+)
+- MongoDB running locally (or update `MONGO_URI`)
+
 ### 1) Backend
 ```bash
 cd backend
+cp .env.example .env
 npm install
 npm run dev
 ```
@@ -36,6 +41,7 @@ Backend env (`backend/.env`):
 ### 2) Frontend
 ```bash
 cd frontend
+cp .env.example .env
 npm install
 npm run dev
 ```
@@ -45,8 +51,15 @@ Frontend env (`frontend/.env`):
 
 ## API (high level)
 - Auth: `POST /api/auth/register`, `POST /api/auth/login`
+- Profile: `GET /api/auth/me`
 - Attendance: `POST /api/attendance/checkin`, `POST /api/attendance/checkout`, `GET /api/attendance/status`
 - Admin: `POST /api/admin/locations`, `GET /api/admin/locations`, `GET /api/admin/attendance`, `GET /api/admin/users`
+- Employees: `POST /api/admin/users`, `PUT /api/admin/users/:id`, `DELETE /api/admin/users/:id`
+- Locations: `GET /api/locations` (employees get assigned locations only)
+
+## Bootstrap + employee provisioning
+- `POST /api/auth/register` is **bootstrap-only**: the **first registered user becomes Admin**. After that, self-registration is disabled.
+- Admin creates employees from **Admin Console → Employee Roster**, and assigns one or more locations to each employee.
 
 ## Notes
 - Desktop testing: use Chrome DevTools → **Sensors** to simulate location coordinates.

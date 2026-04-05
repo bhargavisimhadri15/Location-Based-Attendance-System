@@ -70,9 +70,9 @@ const Login = () => {
 
                     <div className="pt-4 text-center">
                         <p className="text-white/40 font-medium">
-                            Don't have an account? {' '}
+                            First-time setup? {' '}
                             <Link to="/register" className="text-primary hover:text-primary-light transition-colors font-bold underline-offset-4 hover:underline">
-                                Create one
+                                Create admin account
                             </Link>
                         </p>
                     </div>

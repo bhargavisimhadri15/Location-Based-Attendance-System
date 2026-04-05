@@ -1,11 +1,11 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Register = () => {
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'employee' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
     const [error, setError] = useState('');
     const { register } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -29,7 +29,7 @@ const Register = () => {
             >
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold mb-2">Create Account</h2>
-                    <p className="text-white/40">Join the Attendance System</p>
+                    <p className="text-white/40">Initial admin setup (first user only)</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
@@ -72,15 +72,8 @@ const Register = () => {
                             />
                         </div>
 
-                        <div className="relative">
-                            <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={18} />
-                            <select
-                                className="input-field pl-11 appearance-none bg-surface"
-                                onChange={e => setFormData({ ...formData, role: e.target.value })}
-                            >
-                                <option value="employee">Employee</option>
-                                <option value="admin">Administrator</option>
-                            </select>
+                        <div className="text-xs text-white/50 bg-white/5 border border-white/10 rounded-2xl p-4">
+                            After setup, create employees from the Admin Console. Employees should use Login only.
                         </div>
                     </div>
 

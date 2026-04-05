@@ -13,6 +13,9 @@ const AdminDashboard = () => {
     const [newLocation, setNewLocation] = useState({ name: '', lat: '', lon: '', radius: 100, address: '' });
     const [editingLocationId, setEditingLocationId] = useState(null);
     const [editLocation, setEditLocation] = useState({ name: '', lat: '', lon: '', radius: 100, address: '' });
+    const [newEmployee, setNewEmployee] = useState({ name: '', email: '', password: '', assignedLocations: [] });
+    const [editingEmployeeId, setEditingEmployeeId] = useState(null);
+    const [editEmployee, setEditEmployee] = useState({ name: '', email: '', password: '', assignedLocations: [] });
     const [loading, setLoading] = useState(true);
     const [successMsg, setSuccessMsg] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
@@ -120,6 +123,95 @@ const AdminDashboard = () => {
             fetchAdminData();
         } catch (err) {
             setErrorMsg(err.response?.data?.msg || 'Failed to delete location');
+        }
+    };
+
+    const toggleAssignedLocation = (locationId, mode) => {
+        if (mode === 'edit') {
+            const next = editEmployee.assignedLocations.includes(locationId)
+                ? editEmployee.assignedLocations.filter(id => id !== locationId)
+                : [...editEmployee.assignedLocations, locationId];
+            setEditEmployee({ ...editEmployee, assignedLocations: next });
+            return;
+        }
+
+        const next = newEmployee.assignedLocations.includes(locationId)
+            ? newEmployee.assignedLocations.filter(id => id !== locationId)
+            : [...newEmployee.assignedLocations, locationId];
+        setNewEmployee({ ...newEmployee, assignedLocations: next });
+    };
+
+    const handleAddEmployee = async (e) => {
+        e.preventDefault();
+        try {
+            setErrorMsg('');
+            const res = await api.post('/api/admin/users', {
+                name: newEmployee.name,
+                email: newEmployee.email,
+                password: newEmployee.password,
+                assignedLocations: newEmployee.assignedLocations
+            });
+            setEmployees([res.data, ...employees]);
+            setNewEmployee({ name: '', email: '', password: '', assignedLocations: [] });
+            setSuccessMsg('Employee created.');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+            setErrorMsg(err.response?.data?.msg || 'Failed to create employee');
+        }
+    };
+
+    const startEditEmployee = (emp) => {
+        setErrorMsg('');
+        setSuccessMsg('');
+        setEditingEmployeeId(emp._id);
+        setEditEmployee({
+            name: emp.name || '',
+            email: emp.email || '',
+            password: '',
+            assignedLocations: (emp.assignedLocations || []).map(l => l._id)
+        });
+    };
+
+    const cancelEditEmployee = () => {
+        setEditingEmployeeId(null);
+        setEditEmployee({ name: '', email: '', password: '', assignedLocations: [] });
+    };
+
+    const handleUpdateEmployee = async (e) => {
+        e.preventDefault();
+        if (!editingEmployeeId) return;
+
+        try {
+            setErrorMsg('');
+            const payload = {
+                name: editEmployee.name,
+                email: editEmployee.email,
+                assignedLocations: editEmployee.assignedLocations
+            };
+            if (editEmployee.password) payload.password = editEmployee.password;
+
+            const res = await api.put(`/api/admin/users/${editingEmployeeId}`, payload);
+            setEmployees(employees.map(emp => emp._id === editingEmployeeId ? res.data : emp));
+            setSuccessMsg('Employee updated.');
+            setTimeout(() => setSuccessMsg(''), 3000);
+            cancelEditEmployee();
+        } catch (err) {
+            setErrorMsg(err.response?.data?.msg || 'Failed to update employee');
+        }
+    };
+
+    const handleDeleteEmployee = async (emp) => {
+        const ok = window.confirm(`Delete employee "${emp.name}"?`);
+        if (!ok) return;
+
+        try {
+            setErrorMsg('');
+            await api.delete(`/api/admin/users/${emp._id}`);
+            setEmployees(employees.filter(e => e._id !== emp._id));
+            setSuccessMsg('Employee deleted.');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+            setErrorMsg(err.response?.data?.msg || 'Failed to delete employee');
         }
     };
 
@@ -423,26 +515,218 @@ const AdminDashboard = () => {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                    className="grid grid-cols-1 lg:grid-cols-3 gap-8"
                   >
-                    {employees.map(emp => (
-                      <div key={emp._id} className="glass p-6 rounded-3xl border-white/5 hover:-translate-y-1 transition-all group">
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center ring-4 ring-primary/5">
-                            <Users className="text-primary" size={20} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold leading-none mb-1">{emp.name}</h4>
-                            <p className="text-xs text-white/40">{emp.email}</p>
-                          </div>
+                    <div className="glass p-8 rounded-[2rem] border-white/5 h-fit">
+                        <div className="flex items-center gap-3 mb-6">
+                            <PlusCircle className="text-primary" size={22} />
+                            <h3 className="text-xl font-black">Add Employee</h3>
                         </div>
-                        <div className="h-px bg-white/5 mb-4" />
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-white/30">Joined</span>
-                          <span className="font-bold text-white/60">{new Date(emp.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    ))}
+
+                        <form onSubmit={handleAddEmployee} className="space-y-4">
+                            <div>
+                                <label className="label">Full Name</label>
+                                <input
+                                    required
+                                    value={newEmployee.name}
+                                    className="input-field"
+                                    onChange={e => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="label">Email</label>
+                                <input
+                                    required
+                                    type="email"
+                                    value={newEmployee.email}
+                                    className="input-field"
+                                    onChange={e => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="label">Temporary Password</label>
+                                <input
+                                    required
+                                    type="password"
+                                    value={newEmployee.password}
+                                    className="input-field"
+                                    onChange={e => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="label">Assign Locations</div>
+                                <div className="max-h-44 overflow-auto rounded-2xl border border-white/10 bg-surface/40 p-3 space-y-2">
+                                    {locations.length === 0 ? (
+                                        <div className="text-xs text-white/40">Create a location first.</div>
+                                    ) : (
+                                        locations.map(loc => (
+                                            <label key={loc._id} className="flex items-center justify-between gap-3 text-sm text-white/70 cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={newEmployee.assignedLocations.includes(loc._id)}
+                                                        onChange={() => toggleAssignedLocation(loc._id, 'new')}
+                                                    />
+                                                    <span className="font-semibold">{loc.name}</span>
+                                                </div>
+                                                <span className="text-[10px] text-white/30">{loc.radius}m</span>
+                                            </label>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            <button type="submit" className="btn-primary w-full py-4 font-bold flex items-center justify-center gap-2">
+                                Create Employee
+                                <ArrowRightCircle size={18} />
+                            </button>
+
+                            {successMsg && <div className="text-secondary text-sm font-bold flex items-center gap-2 bg-secondary/10 p-3 rounded-xl"><CheckCircle size={16} /> {successMsg}</div>}
+                            {errorMsg && <div className="text-danger text-sm font-bold flex items-center gap-2 bg-danger/10 p-3 rounded-xl">{errorMsg}</div>}
+                        </form>
+                    </div>
+
+                    <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {employees.map(emp => (
+                          <div key={emp._id} className="glass p-6 rounded-3xl border-white/5 hover:-translate-y-1 transition-all group">
+                            <div className="flex items-center justify-between gap-4 mb-4">
+                              <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center ring-4 ring-primary/5">
+                                    <Users className="text-primary" size={20} />
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold leading-none mb-1">{emp.name}</h4>
+                                    <p className="text-xs text-white/40">{emp.email}</p>
+                                  </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => startEditEmployee(emp)}
+                                    className="text-white/30 hover:text-white px-3 py-2 rounded-xl bg-white/0 hover:bg-white/5 border border-white/5 transition-colors text-xs font-bold"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteEmployee(emp)}
+                                    className="text-white/20 hover:text-danger p-2 transition-colors"
+                                    aria-label={`Delete ${emp.name}`}
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {(emp.assignedLocations || []).length === 0 ? (
+                                    <span className="text-[10px] text-white/30 bg-white/5 border border-white/10 px-2 py-1 rounded-full">No locations assigned</span>
+                                ) : (
+                                    emp.assignedLocations.map(loc => (
+                                        <span key={loc._id} className="text-[10px] font-bold bg-primary/10 text-primary-light border border-primary/20 px-2 py-1 rounded-full">
+                                            {loc.name}
+                                        </span>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="h-px bg-white/5 mb-4" />
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-white/30">Joined</span>
+                              <span className="font-bold text-white/60">{new Date(emp.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                    <AnimatePresence>
+                        {editingEmployeeId && (
+                            <motion.div
+                                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                            >
+                                <motion.div
+                                    className="glass w-full max-w-xl rounded-[2rem] border border-white/10 p-8"
+                                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                                >
+                                    <div className="flex items-center justify-between gap-4 mb-6">
+                                        <div>
+                                            <h3 className="text-2xl font-black tracking-tight">Edit Employee</h3>
+                                            <p className="text-white/40 text-sm mt-1">Update profile and assignments</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={cancelEditEmployee}
+                                            className="text-white/40 hover:text-white px-3 py-2 rounded-xl hover:bg-white/5 border border-white/10 transition-colors text-sm font-bold"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+
+                                    <form onSubmit={handleUpdateEmployee} className="space-y-4">
+                                        <div>
+                                            <label className="label">Full Name</label>
+                                            <input
+                                                required
+                                                value={editEmployee.name}
+                                                className="input-field"
+                                                onChange={e => setEditEmployee({ ...editEmployee, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="label">Email</label>
+                                            <input
+                                                required
+                                                type="email"
+                                                value={editEmployee.email}
+                                                className="input-field"
+                                                onChange={e => setEditEmployee({ ...editEmployee, email: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="label">New Password (optional)</label>
+                                            <input
+                                                type="password"
+                                                value={editEmployee.password}
+                                                className="input-field"
+                                                onChange={e => setEditEmployee({ ...editEmployee, password: e.target.value })}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="label">Assign Locations</div>
+                                            <div className="max-h-44 overflow-auto rounded-2xl border border-white/10 bg-surface/40 p-3 space-y-2">
+                                                {locations.map(loc => (
+                                                    <label key={loc._id} className="flex items-center justify-between gap-3 text-sm text-white/70 cursor-pointer">
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={editEmployee.assignedLocations.includes(loc._id)}
+                                                                onChange={() => toggleAssignedLocation(loc._id, 'edit')}
+                                                            />
+                                                            <span className="font-semibold">{loc.name}</span>
+                                                        </div>
+                                                        <span className="text-[10px] text-white/30">{loc.radius}m</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" className="btn-primary w-full py-4 mt-2 font-bold flex items-center justify-center gap-2">
+                                            Save Changes
+                                            <ArrowRightCircle size={18} />
+                                        </button>
+                                    </form>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                   </motion.div>
                 )}
             </AnimatePresence>

@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { authMiddleware } = require('../middleware/auth');
-const { Attendance, Location } = require('../models');
+const { Attendance, Location, User } = require('../models');
 const { isWithinRange } = require('../utils/geoUtils');
 
 // @route   POST api/attendance/checkin
@@ -9,16 +10,30 @@ const { isWithinRange } = require('../utils/geoUtils');
 router.post('/checkin', authMiddleware, async (req, res) => {
     const { locationId, userCoordinates, accuracy } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(locationId)) {
+        return res.status(400).json({ msg: 'Invalid location id' });
+    }
+
     if (!Array.isArray(userCoordinates) || userCoordinates.length !== 2) {
         return res.status(400).json({ msg: 'userCoordinates must be [longitude, latitude]' });
     }
 
     // 1. Accuracy Handling (Threshold 50 meters, for instance)
-    if (accuracy > 50) {
+    if (!Number.isFinite(accuracy) || accuracy > 50) {
         return res.status(400).json({ msg: 'Location accuracy too low' });
     }
 
     try {
+        if (req.user?.role !== 'admin') {
+            const user = await User.findById(req.user.id).select('assignedLocations role');
+            if (!user) return res.status(404).json({ msg: 'User not found' });
+
+            const isAssigned = (user.assignedLocations || []).some((id) => String(id) === String(locationId));
+            if (!isAssigned) {
+                return res.status(403).json({ msg: 'Location not assigned to this employee' });
+            }
+        }
+
         const location = await Location.findById(locationId);
         if (!location) {
             return res.status(404).json({ msg: 'Location not found' });
@@ -71,7 +86,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
         return res.status(400).json({ msg: 'userCoordinates must be [longitude, latitude]' });
     }
 
-    if (accuracy > 50) {
+    if (!Number.isFinite(accuracy) || accuracy > 50) {
         return res.status(400).json({ msg: 'Location accuracy too low' });
     }
 
