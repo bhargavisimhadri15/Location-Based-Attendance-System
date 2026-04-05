@@ -24,7 +24,6 @@ Geofenced attendance tracking built with the MERN stack. Employees can **check i
 ### 1) Backend
 ```bash
 cd backend
-cp .env.example .env
 npm install
 npm run dev
 ```
@@ -37,7 +36,6 @@ Backend env (`backend/.env`):
 ### 2) Frontend
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
