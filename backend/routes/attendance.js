@@ -9,6 +9,10 @@ const { isWithinRange } = require('../utils/geoUtils');
 router.post('/checkin', authMiddleware, async (req, res) => {
     const { locationId, userCoordinates, accuracy } = req.body;
 
+    if (!Array.isArray(userCoordinates) || userCoordinates.length !== 2) {
+        return res.status(400).json({ msg: 'userCoordinates must be [longitude, latitude]' });
+    }
+
     // 1. Accuracy Handling (Threshold 50 meters, for instance)
     if (accuracy > 50) {
         return res.status(400).json({ msg: 'Location accuracy too low' });
@@ -62,6 +66,14 @@ router.post('/checkin', authMiddleware, async (req, res) => {
 // @desc    Check-out from current active session
 router.post('/checkout', authMiddleware, async (req, res) => {
     const { userCoordinates, accuracy } = req.body;
+
+    if (!Array.isArray(userCoordinates) || userCoordinates.length !== 2) {
+        return res.status(400).json({ msg: 'userCoordinates must be [longitude, latitude]' });
+    }
+
+    if (accuracy > 50) {
+        return res.status(400).json({ msg: 'Location accuracy too low' });
+    }
 
     try {
         // Disallow check-outs without valid prior check-in
